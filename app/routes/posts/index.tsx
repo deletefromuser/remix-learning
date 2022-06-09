@@ -20,6 +20,9 @@ export default function Posts() {
 
     return (
         <main className="m-5">
+            <Link to="admin" className="text-red-600 underline">
+                Admin
+            </Link>
             <h1>Posts</h1>
             <ul>
                 {posts.map((post) => (
@@ -33,6 +36,7 @@ export default function Posts() {
                     </li>
                 ))}
             </ul>
+
         </main>
     );
 }
