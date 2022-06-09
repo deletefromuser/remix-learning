@@ -19,7 +19,7 @@ export default function Posts() {
     console.log(posts);
 
     return (
-        <main>
+        <main className="m-5">
             <h1>Posts</h1>
             <ul>
                 {posts.map((post) => (
