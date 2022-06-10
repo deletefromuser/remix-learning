@@ -1,160 +1,96 @@
 import { Form, useActionData, useLoaderData, useTransition } from "@remix-run/react";
 import type { ActionFunction, LoaderFunction } from "@remix-run/server-runtime";
 import { json, redirect } from "@remix-run/server-runtime";
-import invariant from "tiny-invariant";
-import type { Post } from "~/models/post.server";
-import { getPost, UpdatePost } from "~/models/post.server";
+import invariant from 'tiny-invariant';
+import { getPost, updatePost } from "~/models/post.server";
 
-type LoaderData = { post: Post };
+type PostError = {
+    title?: boolean
+    slug?: boolean
+    markdown?: boolean
+}
 
 export const loader: LoaderFunction = async ({ params }) => {
-    invariant(params.slug, `params.slug is required`);
+    invariant(params.slug, 'expected params.slug')
+    return json(await getPost(params.slug))
+}
 
-    const post = await getPost(params.slug);
+export const action: ActionFunction = async ({ request, params }) => {
+    invariant(params.slug, 'expected params.slug')
 
-    invariant(post, `Post not found: ${params.slug}`);
+    const formData = await request.formData()
+    const title = formData.get('title') // FormDateEntryValue | null
+    const slug = params.slug
+    const markdown = formData.get('markdown') // FormDateEntryValue | null
 
-    return json<LoaderData>({ post });
-};
+    const errors: PostError = {
+        ...(!title && { title: true }),
+        ...(!markdown && { markdown: true }),
+    }
+
+    if (Object.keys(errors).length) {
+        return json(errors)
+    }
+
+    invariant(typeof title === 'string')
+    invariant(typeof slug === 'string')
+    invariant(typeof markdown === 'string')
+    await updatePost({ title, slug, markdown })
+
+    return redirect('/posts/admin')
+}
+
+function Error({ children }: { children: string }): JSX.Element {
+    return <em className="text-red-500">{children}</em>
+}
 
 const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
 
-export default function PostSlug() {
-    // const data = useActionData();
-
-    // let errors, values;
-    // if (data) {
-    //     errors = data.errors;
-    //     values = data.values;
-    // }
+export default function EditPost() {
+    const errors = useActionData()
+    const post = useLoaderData()
 
     const transition = useTransition();
-    const isUpdating = Boolean(transition.submission);
+    const isCreating = Boolean(transition.submission);
 
-    const { post } = useLoaderData<LoaderData>();
-    console.log(post);
+    console.log({ post })
+
     return (
-        <Form method="post" action="/posts/admin/update">
+        <Form method="put">
             <p>
                 <label>
-                    Post Title:{" "}
-                    {/* {errors?.title ? (
-                        <em className="text-red-600">{errors.title}</em>
-                    ) : null} */}
+                    Post Title:{' '}
                     <input
+                        key={post?.title}
+                        defaultValue={post?.title}
                         type="text"
                         name="title"
                         className={inputClassName}
-                        defaultValue={post.title}
                     />
+                    {errors?.title ? <Error>Title is required</Error> : null}
                 </label>
             </p>
-            {/* <p>
-                <label>
-                    Post Slug:{" "}
-                    <input
-                        type="text"
-                        name="slug"
-                        className={inputClassName}
-                        disabled={true}
-                    />
-                </label>
-            </p> */}
-            <input
-                type="hidden"
-                name="slug"
-                // value={post.slug}
-            />
             <p>
-                <label htmlFor="markdown">Markdown:
-                    {/* {errors?.markdown ? (
-                        <em className="text-red-600">
-                            {errors.markdown}
-                        </em>
-                    ) : null} */}
-                </label>
+                <label htmlFor="markdown">Post Body (Markdown Format):</label>{' '}
+                {errors?.markdown ? <Error>Body is required</Error> : null}
                 <br />
                 <textarea
+                    key={post?.markdown}
+                    defaultValue={post?.markdown}
                     id="markdown"
                     rows={20}
                     name="markdown"
                     className={`${inputClassName} font-mono`}
-                    defaultValue={post.markdown}
                 />
             </p>
             <p className="text-right">
                 <button
                     type="submit"
                     className="rounded bg-blue-500 py-2 px-4 text-white hover:bg-blue-600 focus:bg-blue-400 disabled:bg-blue-300"
-                    disabled={isUpdating}>
-                    {isUpdating ? "Updating..." : "Update Post"}
+                    disabled={isCreating}>
+                    {isCreating ? "Creating..." : "Create Post"}
                 </button>
             </p>
         </Form>
-    );
-
-    // return (
-    //     <main className="mx-auto max-w-4xl">
-    //         <h1 className="my-6 border-b-2 text-center text-3xl">
-    //             {post.title}
-    //         </h1>
-    //         {/* <div dangerouslySetInnerHTML={{ __html: html }} /> */}
-    //         <div >{post.markdown}</div>
-    //     </main>
-    // );
+    )
 }
-
-type ActionData =
-    | {
-        values: {
-            title: null | string;
-            slug: null | string;
-            markdown: null | string;
-        },
-        errors: {
-            title: null | string;
-            slug: null | string;
-            markdown: null | string;
-        }
-    }
-    | undefined;
-
-// export const action: ActionFunction = async ({ request }) => {
-//     // TODO: remove me
-//     await new Promise((res) => setTimeout(res, 5000));
-
-//     const formData = await request.formData();
-
-//     const title = formData.get("title") as string;
-//     const slug = formData.get("slug") as string;
-//     const markdown = formData.get("markdown") as string;
-
-//     const errors = {
-//         title: title ? null : "Title is required",
-//         markdown: markdown ? null : "Markdown is required",
-//         slug: null
-//     };
-//     const hasErrors = Object.values(errors).some(
-//         (errorMessage) => errorMessage
-//     );
-//     if (hasErrors) {
-//         return json<ActionData>({ errors, values: { title, slug, markdown } });
-//     }
-
-//     invariant(
-//         typeof title === "string",
-//         "title must be a string"
-//     );
-//     invariant(
-//         typeof slug === "string",
-//         "slug must be a string"
-//     );
-//     invariant(
-//         typeof markdown === "string",
-//         "markdown must be a string"
-//     );
-
-//     await UpdatePost({ title, slug, markdown });
-
-//     return redirect("/posts/admin");
-// };

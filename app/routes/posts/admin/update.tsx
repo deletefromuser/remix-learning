@@ -2,7 +2,7 @@ import { Form, useActionData, useTransition } from "@remix-run/react";
 import type { ActionFunction } from "@remix-run/server-runtime";
 import { json, redirect } from "@remix-run/server-runtime";
 import invariant from "tiny-invariant";
-import { UpdatePost } from "~/models/post.server";
+import { updatePost } from "~/models/post.server";
 
 const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
 
@@ -120,7 +120,7 @@ export const action: ActionFunction = async ({ request }) => {
         "markdown must be a string"
     );
 
-    await UpdatePost({ title, slug, markdown });
+    await updatePost({ title, slug, markdown });
 
     return redirect("/posts/admin");
 };
